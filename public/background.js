@@ -18,10 +18,10 @@ async function scheduleNextAlarm() {
     }
   });
 
-  const { settings, accessToken } = await chrome.storage.sync.get(['settings', 'accessToken']);
+  const { settings, user } = await chrome.storage.sync.get(['settings', 'user']);
   
-  if (!settings || !settings.isEnabled || !settings.selectedCalendarId || !accessToken) {
-    console.log('Calert is disabled or not configured. No alarm scheduled.');
+  if (!settings || !settings.isEnabled || !settings.selectedCalendarId || !user || !user.accessToken) {
+    console.log('Calert is disabled, not configured, or user is not logged in. No alarm scheduled.');
     return;
   }
 
@@ -31,7 +31,7 @@ async function scheduleNextAlarm() {
   try {
     const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?timeMin=${timeMin}&maxResults=10&singleEvents=true&orderBy=startTime`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${user.accessToken}`,
       },
     });
 
@@ -117,8 +117,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.runtime.onStartup.addListener(scheduleNextAlarm);
 chrome.runtime.onInstalled.addListener(scheduleNextAlarm);
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && (changes.settings || changes.accessToken)) {
-    console.log('Calert: Settings changed, rescheduling alarm.');
+  if (area === 'sync' && (changes.settings || changes.user)) {
+    console.log('Calert: Settings or user changed, rescheduling alarm.');
     scheduleNextAlarm();
   }
 });

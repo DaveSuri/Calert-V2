@@ -1,4 +1,5 @@
 import type { Calendar, Event } from '../types';
+import { SERVER_BASE_URL } from '../config.js';
 
 interface GoogleCalendarListItem {
   id: string;
@@ -11,7 +12,7 @@ interface GoogleCalendarListResponse {
 }
 
 interface GoogleCalendarEvent {
-  id: string;
+  id:string;
   summary: string;
   start: {
     dateTime?: string;
@@ -27,13 +28,20 @@ interface GoogleCalendarEventsResponse {
   items: GoogleCalendarEvent[];
 }
 
+// When the app is running as a web page on the same domain as the server,
+// relative paths work fine. When it's running as a Chrome Extension,
+// we must use the absolute URL of the deployed server.
+const IS_EXTENSION = window.location.protocol === 'chrome-extension:';
+const API_BASE_URL = IS_EXTENSION ? SERVER_BASE_URL : '';
+
+
 /**
  * Fetches the list of calendars for the authenticated user via the backend proxy.
  * @param accessToken The user's Google OAuth 2.0 access token.
  * @returns A promise that resolves to an array of calendars.
  */
 export const fetchCalendars = async (accessToken: string): Promise<Calendar[]> => {
-  const response = await fetch('/api/calendars', {
+  const response = await fetch(`${API_BASE_URL}/api/calendars`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
@@ -75,7 +83,7 @@ export const fetchUpcomingEvents = async (accessToken: string, calendarId: strin
   }
   const encodedCalendarId = encodeURIComponent(calendarId);
 
-  const response = await fetch(`/api/events?calendarId=${encodedCalendarId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/events?calendarId=${encodedCalendarId}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },

@@ -14,8 +14,16 @@ const USER_STORAGE_KEY = 'calert_user';
 const SETTINGS_STORAGE_KEY = 'calert_settings';
 const ONBOARDING_COMPLETE_KEY = 'calert_onboarding_complete';
 
-// This is the public client ID for the Calert application.
-const GOOGLE_CLIENT_ID = '360373462324-nr5vpdjfd1g5i38j5h5c6l3g74d0lqd9.apps.googleusercontent.com';
+// --- Google OAuth Client IDs ---
+// We need separate Client IDs for the web app and the Chrome Extension because
+// they have different origins ('https://...' vs 'chrome-extension://...').
+const GOOGLE_CLIENT_ID_WEB = '360373462324-nr5vpdjfd1g5i38j5h5c6l3g74d0lqd9.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID_CHROME_EXTENSION = '360373462324-0fjqvtd35esaqi5v8ioschmbhshj0l4l.apps.googleusercontent.com';
+
+// Detect the current environment to select the correct Client ID.
+const IS_EXTENSION = window.location.protocol === 'chrome-extension:';
+const GOOGLE_CLIENT_ID = IS_EXTENSION ? GOOGLE_CLIENT_ID_CHROME_EXTENSION : GOOGLE_CLIENT_ID_WEB;
+
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 

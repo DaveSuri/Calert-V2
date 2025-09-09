@@ -9,7 +9,7 @@ const port = process.env.PORT || 8080;
 app.use(express.json());
 
 // --- API ROUTER ---
-// Create a dedicated router for all API endpoints.
+// This is placed before any static file handlers to ensure it gets first priority.
 const apiRouter = express.Router();
 
 // API endpoint for generating briefings
@@ -124,24 +124,26 @@ apiRouter.get('/events', async (req, res) => {
   }
 });
 
-// Mount the API router. All requests starting with /api will be handled by it.
-// This is placed before static file serving to ensure it takes priority.
 app.use('/api', apiRouter);
 
 
 // --- STATIC FILE & SPA SERVING ---
 
-// Serve all static files from the project's root directory.
-// This allows the browser to fetch /index.tsx, /components/..., etc.
-// Note: This is simpler and more robust than defining individual routes for each file/folder.
-// For security in a real production app with a build step, you'd serve from a 'dist' or 'build' folder.
-// Given the current no-build-step setup, we serve the source files directly.
-app.use(express.static(__dirname));
+// Serve all static assets (like manifest.json, background.js, html files) from the 'public' directory.
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Explicitly serve the source code directories needed by the browser.
+// This is more secure than serving the entire project root and makes routing unambiguous.
+app.use('/components', express.static(path.join(__dirname, 'components')));
+app.use('/services', express.static(path.join(__dirname, 'services')));
 
-// All GET requests not handled by the API router or static file server should
-// serve the main React application's entry point. This is the catch-all for the SPA.
+// Explicitly serve root-level source files that the browser needs to fetch.
+app.get('/index.tsx', (req, res) => res.sendFile(path.join(__dirname, 'index.tsx')));
+app.get('/App.tsx', (req, res) => res.sendFile(path.join(__dirname, 'App.tsx')));
+app.get('/types.ts', (req, res) => res.sendFile(path.join(__dirname, 'types.ts')));
+
+// All other GET requests not handled by the routers above will serve the main React application.
+// This acts as the catch-all for client-side routing and must come last.
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

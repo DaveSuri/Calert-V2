@@ -31,6 +31,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
   const [isEventsLoading, setIsEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
+  const [briefingsUsed, setBriefingsUsed] = useState(0);
+
+  useEffect(() => {
+    if (user.tier === 'free') {
+        const usageKey = 'calert_briefing_usage';
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+            chrome.storage.sync.get(usageKey, (result: any) => {
+                if (result[usageKey]) {
+                    const usage = result[usageKey];
+                    // Check for monthly reset
+                    if (usage.month === new Date().getMonth()) {
+                        setBriefingsUsed(usage.count);
+                    } else {
+                        setBriefingsUsed(0);
+                    }
+                }
+            });
+        }
+    }
+  }, [user.tier]);
+
   const tierInfo = {
     free: {
         label: 'Free Plan',
@@ -80,6 +101,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
   const loadEvents = useCallback(async () => {
     if (!selectedCalendarId) {
         setEvents([]);
+        setIsEventsLoading(false);
         return;
     }
     try {
@@ -120,7 +142,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
     const newSettings: Settings = { selectedCalendarId, isEnabled };
     const dataToSync = {
         settings: newSettings,
-        accessToken: user.accessToken,
+        user: user,
     };
 
     // Save to the extension's synced storage if available
@@ -130,7 +152,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
           console.error("Error saving to chrome.storage.sync:", chrome.runtime.lastError);
           setSaveStatus('error');
         } else {
-          console.log("Settings synced to extension.");
+          console.log("Settings and user synced to extension.");
           onSettingsSave(newSettings);
           setSaveStatus('saved');
           setIsDirty(false);
@@ -161,38 +183,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
     }
 
     if (events.length === 0) {
-        return <p className="mt-4 text-center text-sm text-gray-500">No upcoming events found.</p>;
+        return <p className="mt-4 text-center text-sm text-gray-500">No upcoming events found for this calendar.</p>;
     }
     
-    const nextEventId = events.length > 0 ? events[0].id : null;
-
     return (
-        <ul className="mt-4 space-y-3">
+        <ul className="space-y-4">
             {events.map(event => {
-                const isNextEvent = event.id === nextEventId;
                 const startTime = new Date(event.start);
-
+                const eventDate = startTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                const eventTime = startTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
                 return (
-                    <li key={event.id} className={`p-4 rounded-lg flex items-start space-x-4 ${isNextEvent ? 'bg-indigo-50 border border-brand-primary' : 'bg-gray-50'}`}>
-                        <div className="flex-shrink-0">
-                            <div className="flex flex-col items-center justify-center h-12 w-12 rounded-md bg-white shadow-sm border border-gray-200">
-                                <span className="text-sm font-semibold text-brand-primary uppercase">{startTime.toLocaleString('default', { month: 'short' })}</span>
-                                <span className="text-xl font-bold text-gray-800">{startTime.getDate()}</span>
-                            </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className={`font-semibold text-gray-900 truncate ${isNextEvent ? 'text-brand-dark' : ''}`}>{event.summary}</p>
-                            <p className="text-sm text-gray-500">
-                                {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                        </div>
-                        {isNextEvent && (
-                           <div className="flex-shrink-0 self-center">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Next alarm
-                                </span>
-                           </div>
-                        )}
+                    <li key={event.id} className="border-l-4 border-brand-secondary pl-4">
+                        <p className="font-semibold text-gray-800">{event.summary}</p>
+                        <p className="text-sm text-gray-500">{eventDate} at {eventTime}</p>
                     </li>
                 );
             })}
@@ -200,137 +203,92 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
     );
   };
   
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center py-10">
-            <Spinner className="w-12 h-12" />
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center py-10 text-red-600 bg-red-50 p-4 rounded-lg">
-            <p className="font-semibold">An Error Occurred</p>
-            <p>{error}</p>
-        </div>
-      );
-    }
-
-    if (calendars.length === 0) {
-      return (
-        <div className="text-center py-10 text-gray-600">
-            <p className="font-semibold">No Calendars Found</p>
-            <p>We couldn't find any calendars for this Google account.</p>
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <div>
-            <h2 className="text-xl font-semibold text-gray-900">Calendar to Monitor</h2>
-            <p className="mt-1 text-sm text-gray-500">Calert will watch for events on this calendar.</p>
-            <fieldset className="mt-4">
-                <legend className="sr-only">Calendar selection</legend>
-                <div className="space-y-4">
-                    {calendars.map((calendar) => (
-                        <div key={calendar.id} className="flex items-center">
-                            <input
-                                id={calendar.id}
-                                name="calendar-selection"
-                                type="radio"
-                                checked={selectedCalendarId === calendar.id}
-                                onChange={() => setSelectedCalendarId(calendar.id)}
-                                className="h-4 w-4 border-gray-300 text-brand-primary focus:ring-brand-secondary"
-                            />
-                            <label htmlFor={calendar.id} className="ml-3 block text-sm font-medium text-gray-700">
-                                {calendar.summary}
-                                {calendar.primary && <span className="text-xs text-brand-primary font-bold ml-2">(Primary)</span>}
-                            </label>
-                        </div>
-                    ))}
-                </div>
-            </fieldset>
-        </div>
-
-        <div className="border-t border-gray-200 pt-6">
-            <ToggleSwitch
-                label="Enable Calert"
-                enabled={isEnabled}
-                onChange={setIsEnabled}
-            />
-            <p className="mt-2 text-sm text-gray-500">
-                When enabled, Calert will show full-screen alerts for your events.
-            </p>
-        </div>
-        
-        <div className="border-t border-gray-200 pt-6">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Upcoming Events</h2>
-                    <p className="mt-1 text-sm text-gray-500">The next alarm will be scheduled for the highlighted event.</p>
-                </div>
-                <div className="mt-1 flex-shrink-0">
-                    {isEventsLoading ? (
-                        <div className="flex items-center text-sm text-gray-500" role="status" aria-live="polite">
-                            <Spinner className="w-4 h-4 mr-2" />
-                            <span>Syncing...</span>
-                        </div>
-                    ) : eventsError ? (
-                        <div className="flex items-center text-sm text-red-600 font-medium" role="alert">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                            <span>Sync failed</span>
-                        </div>
-                    ) : (
-                         <div className="flex items-center text-sm text-green-600 font-medium" role="status">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span>Up to date</span>
-                         </div>
-                    )}
-                </div>
-            </div>
-            {renderEventsList()}
-        </div>
-      </>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-brand-light">
-      <Header user={user} onLogout={onLogout} onUpgradeClick={onNavigateToPricing} onNavigateToAccount={onNavigateToAccount} />
-      <main className="py-10">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-y-2">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Settings</h1>
-               <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${tierInfo.className}`}>
-                  {tierInfo.label}
-              </span>
+      <Header 
+        user={user} 
+        onLogout={onLogout} 
+        onUpgradeClick={onNavigateToPricing} 
+        onNavigateToAccount={onNavigateToAccount} 
+      />
+      <main className="mx-auto max-w-5xl py-8 px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div className="lg:col-span-2">
+            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md">
+              <h2 className="text-2xl font-bold text-gray-800 border-b border-gray-200 pb-4">Configuration</h2>
+              {isLoading && <div className="py-8 flex justify-center"><Spinner /></div>}
+              {error && <p className="mt-4 text-red-600 bg-red-50 p-4 rounded-lg">{error}</p>}
+              {!isLoading && !error && calendars.length > 0 && (
+                <div className="mt-6 space-y-6">
+                  <div>
+                    <label htmlFor="calendar-select" className="block text-sm font-medium text-gray-700">
+                      Monitor Calendar
+                    </label>
+                    <select
+                      id="calendar-select"
+                      name="calendar"
+                      value={selectedCalendarId || ''}
+                      onChange={(e) => setSelectedCalendarId(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm"
+                    >
+                      {calendars.map(cal => <option key={cal.id} value={cal.id}>{cal.summary}</option>)}
+                    </select>
+                  </div>
+                  <ToggleSwitch
+                    label="Enable Calert Notifications"
+                    enabled={isEnabled}
+                    onChange={setIsEnabled}
+                  />
+                </div>
+              )}
+               {!isLoading && !error && calendars.length === 0 && (
+                  <p className="mt-6 text-gray-600">No calendars found. Please ensure you have at least one calendar in your Google account and have granted permission.</p>
+               )}
             </div>
-            <div className="mt-8 bg-white p-6 sm:p-8 rounded-xl shadow-md space-y-8">
-                {renderContent()}
-            </div>
-            
-            <div className="mt-6 flex justify-end items-center">
-                {saveStatus === 'saved' && (
-                  <span className="text-green-600 font-medium mr-4 transition-opacity duration-300">Settings saved!</span>
-                )}
-                {saveStatus === 'error' && (
-                  <span className="text-red-600 font-medium mr-4">Save failed.</span>
-                )}
-                <button
+          </div>
+
+          <div className="space-y-8">
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800">Status</h3>
+              <div className="mt-4 space-y-3">
+                 <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Your Plan</span>
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${tierInfo.className}`}>
+                        {tierInfo.label}
+                    </span>
+                 </div>
+                 {user.tier === 'free' && (
+                   <div className="text-sm text-gray-600 border-t border-gray-200 pt-3">
+                      <p>Briefings Used: <strong>{briefingsUsed} / 5</strong> this month.</p>
+                      <button onClick={onNavigateToPricing} className="text-brand-primary font-semibold hover:underline">Upgrade to Pro</button>
+                   </div>
+                 )}
+              </div>
+              
+              {isDirty && (
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                  <button
                     onClick={handleSave}
-                    disabled={!isDirty || saveStatus === 'saving' || isLoading || !!error || calendars.length === 0}
-                    className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                    {saveStatus === 'saving' ? 'Saving...' : 'Save Settings'}
-                </button>
+                    disabled={saveStatus === 'saving'}
+                    className="w-full flex justify-center items-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary disabled:bg-gray-300"
+                  >
+                    {saveStatus === 'saving' && <Spinner className="w-4 h-4 mr-2" />}
+                    {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? '✓ Saved!' : 'Save Changes'}
+                  </button>
+                   {saveStatus === 'error' && <p className="mt-2 text-xs text-red-600">Failed to save settings.</p>}
+                </div>
+              )}
             </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800">Upcoming Events</h3>
+              <div className="mt-4">
+                {renderEventsList()}
+              </div>
+            </div>
+
+          </div>
         </div>
       </main>
     </div>

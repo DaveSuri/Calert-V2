@@ -1,6 +1,7 @@
 import { marked } from 'marked';
+import { SERVER_BASE_URL } from './config.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Attempt to enter full-screen mode for an immersive experience.
     if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(err => {
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const joinButton = document.getElementById('join-button');
     const dismissButton = document.getElementById('dismiss-button');
     const briefingButton = document.getElementById('briefing-button');
+    const briefingButtonText = document.getElementById('briefing-button-text');
     const briefingContainer = document.getElementById('briefing-container');
 
     eventTitleEl.textContent = title || 'Calendar Event';
@@ -57,19 +59,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Gemini Briefing Feature
+    // Gemini Briefing Feature with Limits
+    const BRIEFING_USAGE_KEY = 'calert_briefing_usage';
+    const BRIEFING_LIMIT_FREE = 5;
+    let usageData = { count: 0, month: new Date().getMonth() };
+    let isPro = false;
+    let briefingEntitlement = { canBrief: false, limitReached: false, remaining: 0 };
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        const { user, [BRIEFING_USAGE_KEY]: storedUsage } = await chrome.storage.sync.get(['user', BRIEFING_USAGE_KEY]);
+
+        if (user && (user.tier === 'pro' || user.tier === 'teams')) {
+            isPro = true;
+        }
+
+        if (storedUsage) {
+            // Reset count if we're in a new month
+            if (storedUsage.month !== new Date().getMonth()) {
+                usageData = { count: 0, month: new Date().getMonth() };
+                await chrome.storage.sync.set({ [BRIEFING_USAGE_KEY]: usageData });
+            } else {
+                usageData = storedUsage;
+            }
+        }
+    }
+
+    if (isPro) {
+        briefingEntitlement = { canBrief: true, limitReached: false, remaining: Infinity };
+    } else {
+        const remaining = BRIEFING_LIMIT_FREE - usageData.count;
+        briefingEntitlement = {
+            canBrief: remaining > 0,
+            limitReached: remaining <= 0,
+            remaining: Math.max(0, remaining),
+        };
+    }
+
     if (description && description.trim()) {
         briefingButton.classList.remove('hidden');
-        briefingButton.addEventListener('click', handleGetBriefing);
+
+        if (briefingEntitlement.limitReached) {
+            briefingButton.disabled = true;
+            briefingButtonText.textContent = 'Limit Reached';
+            briefingButton.title = 'You have used all 5 free briefings this month. Upgrade to Pro for unlimited access.';
+        } else {
+            briefingButton.addEventListener('click', handleGetBriefing);
+            if (!isPro) {
+                briefingButtonText.textContent = `Get Briefing (${briefingEntitlement.remaining} left)`;
+            }
+        }
     }
 
     async function handleGetBriefing() {
+        if (briefingEntitlement.limitReached && !isPro) return;
+
         briefingButton.disabled = true;
         briefingContainer.classList.remove('hidden');
         briefingContainer.innerHTML = '<div class="loader"></div>';
 
         try {
-            const apiResponse = await fetch('/api/briefing', {
+            const apiResponse = await fetch(`${SERVER_BASE_URL}/api/briefing`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -84,7 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const briefingMarkdown = await apiResponse.text();
             briefingContainer.innerHTML = marked.parse(briefingMarkdown);
-            // On success, we can leave the button disabled as it's a one-shot action.
+            
+            // On success, increment usage count for free users
+            if (!isPro) {
+                usageData.count++;
+                await chrome.storage.sync.set({ [BRIEFING_USAGE_KEY]: usageData });
+            }
 
         } catch (error) {
             console.error('Error getting meeting briefing:', error);
