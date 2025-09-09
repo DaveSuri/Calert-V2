@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calert - Event Reminder</title>
+    <link rel="stylesheet" href="calert_tab.css">
+</head>
+<body>
+    <main id="container">
+        <h1 id="event-title"></h1>
+        <p id="event-time"></p>
+        <div id="actions">
+            <button id="briefing-button" class="action-button hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 3L9.75 7.5L6 9L9.75 10.5L12 15L14.25 10.5L18 9L14.25 7.5L12 3Z"></path><path d="M3 12L4.5 9.75L7 6L4.5 2.25L3 0L1.5 2.25L-1 6L1.5 9.75L3 12Z" transform="translate(15 6)"></path><path d="M3 12L4.5 9.75L7 6L4.5 2.25L3 0L1.5 2.25L-1 6L1.5 9.75L3 12Z" transform="translate(3 15)"></path></svg>
+                Get Briefing
+            </button>
+            <button id="join-button" class="action-button hidden">Join Meeting</button>
+            <button id="dismiss-button" class="action-button">Dismiss</button>
+        </div>
+        <div id="briefing-container" class="hidden"></div>
+    </main>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+        "marked": "https://aistudiocdn.com/marked@^16.2.1"
+      }
+    }
+    </script>
+    <script type="module" src="calert_tab.js"></script>
+</body>
+</html>

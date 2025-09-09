@@ -1,0 +1,5 @@
+{
+  "name": "Calert",
+  "description": "A web application to configure assertive, full-screen calendar notifications. Connect your Google Calendar and never miss an important event again.",
+  "requestFramePermissions": []
+}
