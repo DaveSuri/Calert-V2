@@ -1,14 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
 import { marked } from 'marked';
-
-// This file is executed in a browser environment, but the coding guidelines
-// require using `process.env.API_KEY`. We will assume a build tool or environment
-// substitutes this variable before deployment.
-declare var process: {
-  env: {
-    API_KEY: string;
-  }
-};
 
 document.addEventListener('DOMContentLoaded', () => {
     // Attempt to enter full-screen mode for an immersive experience.
@@ -78,44 +68,27 @@ document.addEventListener('DOMContentLoaded', () => {
         briefingContainer.classList.remove('hidden');
         briefingContainer.innerHTML = '<div class="loader"></div>';
 
-        const apiKey = process.env.API_KEY;
-
-        if (!apiKey) {
-            console.error('Google API Key is not configured.');
-            briefingContainer.innerHTML = `<p style="color: #ffcdd2;">The AI Briefing feature is not configured. An API key is required.</p>`;
-            briefingButton.disabled = false;
-            return;
-        }
-
         try {
-            const ai = new GoogleGenAI({ apiKey });
-
-            const prompt = `You are a helpful meeting assistant. Your goal is to provide a concise, clear, and actionable briefing for an upcoming calendar event.
-Based on the event title and description provided below, generate a briefing in Markdown format.
-
-The briefing should include the following sections:
-- A one-sentence **Summary** of the meeting's purpose.
-- **Key Topics** to be discussed, presented as a bulleted list.
-- **Action Items / Talking Points** suggesting what the user might need to prepare or discuss, also as a bulleted list.
-
-**Event Title:** ${title}
-
-**Event Description:**
-${description}
-
-Provide only the Markdown content for the briefing, with each section having a heading (e.g., ### Summary).`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
+            const apiResponse = await fetch('/api/briefing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ title, description }),
             });
 
-            const briefingMarkdown = response.text;
+            if (!apiResponse.ok) {
+                const errorText = await apiResponse.text();
+                throw new Error(`Server responded with status: ${apiResponse.status}. ${errorText}`);
+            }
+
+            const briefingMarkdown = await apiResponse.text();
             briefingContainer.innerHTML = marked.parse(briefingMarkdown);
+            // On success, we can leave the button disabled as it's a one-shot action.
 
         } catch (error) {
             console.error('Error getting meeting briefing:', error);
-            briefingContainer.innerHTML = `<p style="color: #ffcdd2;">Sorry, I couldn't generate a briefing for this meeting. Please check your API key or try again later.</p>`;
+            briefingContainer.innerHTML = `<p style="color: #ffcdd2;">Sorry, I couldn't generate a briefing for this meeting. Please try again later.</p>`;
             briefingButton.disabled = false; // Re-enable button on error
         }
     }

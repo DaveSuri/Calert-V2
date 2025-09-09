@@ -28,12 +28,12 @@ interface GoogleCalendarEventsResponse {
 }
 
 /**
- * Fetches the list of calendars for the authenticated user.
+ * Fetches the list of calendars for the authenticated user via the backend proxy.
  * @param accessToken The user's Google OAuth 2.0 access token.
  * @returns A promise that resolves to an array of calendars.
  */
 export const fetchCalendars = async (accessToken: string): Promise<Calendar[]> => {
-  const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+  const response = await fetch('/api/calendars', {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
@@ -44,7 +44,9 @@ export const fetchCalendars = async (accessToken: string): Promise<Calendar[]> =
        // The token is invalid or expired. The UI should prompt for re-authentication.
        throw new Error('Unauthorized');
     }
-    throw new Error(`Google API request failed with status: ${response.status}`);
+    const errorText = await response.text();
+    console.error("Error from calendar proxy:", errorText);
+    throw new Error(`API request failed with status: ${response.status}`);
   }
 
   const data: GoogleCalendarListResponse = await response.json();
@@ -62,7 +64,7 @@ export const fetchCalendars = async (accessToken: string): Promise<Calendar[]> =
 };
 
 /**
- * Fetches the next 5 upcoming events for a given calendar.
+ * Fetches the next 5 upcoming events for a given calendar via the backend proxy.
  * @param accessToken The user's Google OAuth 2.0 access token.
  * @param calendarId The ID of the calendar to fetch events from.
  * @returns A promise that resolves to an array of events.
@@ -71,10 +73,9 @@ export const fetchUpcomingEvents = async (accessToken: string, calendarId: strin
   if (!calendarId) {
     return [];
   }
-  const timeMin = new Date().toISOString();
   const encodedCalendarId = encodeURIComponent(calendarId);
 
-  const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}/events?timeMin=${timeMin}&maxResults=5&singleEvents=true&orderBy=startTime`, {
+  const response = await fetch(`/api/events?calendarId=${encodedCalendarId}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
@@ -84,7 +85,9 @@ export const fetchUpcomingEvents = async (accessToken: string, calendarId: strin
     if (response.status === 401) {
        throw new Error('Unauthorized');
     }
-    throw new Error(`Google API request failed with status: ${response.status}`);
+    const errorText = await response.text();
+    console.error("Error from events proxy:", errorText);
+    throw new Error(`API request failed with status: ${response.status}`);
   }
 
   const data: GoogleCalendarEventsResponse = await response.json();

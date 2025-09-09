@@ -26,7 +26,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ user, onOnboardingC
         setSelectedCalendarId(primaryCalendar.id);
       }
     } catch (err) {
-      setError('Failed to fetch calendars. Please try reloading the page.');
+      const message = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(`Failed to fetch calendars. Please ensure the Google Calendar API is enabled for your project. (Error: ${message})`);
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -74,7 +75,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ user, onOnboardingC
             <h1 className="text-3xl font-bold text-gray-800">Select Your Primary Calendar</h1>
             <p className="mt-2 text-md text-gray-600">Calert will monitor this calendar for upcoming events.</p>
             {isLoading && <div className="py-8"><Spinner className="w-10 h-10" /></div>}
-            {error && <p className="mt-4 text-red-600">{error}</p>}
+            {error && <p className="mt-4 text-red-600 bg-red-50 p-4 rounded-lg">{error}</p>}
             {!isLoading && !error && (
               <div className="mt-6 w-full max-w-md text-left space-y-3">
                 {calendars.map(calendar => (

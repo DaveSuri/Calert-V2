@@ -68,7 +68,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
       if (err instanceof Error && err.message === 'Unauthorized') {
         setError('Your session has expired. Please log out and log in again to reconnect your calendar.');
       } else {
-        setError('Failed to fetch calendars. Please check your connection and try again.');
+        const message = err instanceof Error ? err.message : 'An unknown error occurred.';
+        setError(`Failed to fetch calendars. Please check your connection or API configuration. (Error: ${message})`);
         console.error(err);
       }
     } finally {
