@@ -1,5 +1,5 @@
 import type { Calendar, Event } from '../types';
-import { SERVER_BASE_URL } from '../config.js';
+import { SERVER_BASE_URL } from '../config';
 
 interface GoogleCalendarListItem {
   id: string;

@@ -45,11 +45,12 @@ Provide only the Markdown content for the briefing, with each section having a h
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
-    
+
+    const outputText = response.output_text || response.text || '';
     res.setHeader('Content-Type', 'text/plain');
-    res.send(response.text);
+    res.send(outputText);
 
   } catch (error) {
     console.error('Error calling Gemini API:', error);
@@ -129,25 +130,16 @@ app.use('/api', apiRouter);
 
 // --- STATIC FILE & SPA SERVING ---
 
-// Serve all static assets (like manifest.json, background.js, html files) from the 'public' directory.
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve built frontend from 'dist' directory (output of Vite build)
+app.use(express.static(path.join(__dirname, 'dist')));
 
-// Explicitly serve the source code directories needed by the browser.
-// This is more secure than serving the entire project root and makes routing unambiguous.
-app.use('/components', express.static(path.join(__dirname, 'components')));
-app.use('/services', express.static(path.join(__dirname, 'services')));
+// Optionally expose additional static assets from 'public' if needed
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Explicitly serve root-level source files that the browser needs to fetch.
-app.get('/index.tsx', (req, res) => res.sendFile(path.join(__dirname, 'index.tsx')));
-app.get('/App.tsx', (req, res) => res.sendFile(path.join(__dirname, 'App.tsx')));
-app.get('/types.ts', (req, res) => res.sendFile(path.join(__dirname, 'types.ts')));
-
-// All other GET requests not handled by the routers above will serve the main React application.
-// This acts as the catch-all for client-side routing and must come last.
+// Catch-all to serve index.html from the built app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
-
 
 app.listen(port, () => {
   console.log(`Calert server listening on port ${port}`);
