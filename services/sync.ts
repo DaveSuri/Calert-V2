@@ -1,4 +1,5 @@
 import { UnauthorizedError, apiFetch } from './http';
+import { SERVER_BASE_URL } from '../config';
 
 // For SPA usage: read app token from localStorage or env (defined via Vite)
 function getAppToken(): string | null {
@@ -14,7 +15,9 @@ function getAppToken(): string | null {
 
 // When running in SPA context, use relative base ('') so Vite proxy or same-origin applies.
 // In extension context you shouldn't import this file; the extension uses public/config.js.
-const API_BASE = '';
+// For production builds, we should always use the absolute URL.
+const IS_DEVELOPMENT = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = IS_DEVELOPMENT ? '' : SERVER_BASE_URL;
 
 export async function syncTodayEvents(accessToken: string, calendarId: string) {
   const appToken = getAppToken();

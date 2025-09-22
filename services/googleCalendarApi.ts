@@ -32,8 +32,10 @@ interface GoogleCalendarEventsResponse {
 // When the app is running as a web page on the same domain as the server,
 // relative paths work fine. When it's running as a Chrome Extension,
 // we must use the absolute URL of the deployed server.
+// For production builds, we should always use the absolute URL.
 const IS_EXTENSION = window.location.protocol === 'chrome-extension:';
-const API_BASE_URL = IS_EXTENSION ? SERVER_BASE_URL : '';
+const IS_DEVELOPMENT = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = (IS_EXTENSION || !IS_DEVELOPMENT) ? SERVER_BASE_URL : '';
 
 
 /**
