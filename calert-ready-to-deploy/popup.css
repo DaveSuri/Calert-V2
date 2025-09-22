@@ -1,0 +1,14 @@
+.container { width: 260px; padding: 12px; font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+.header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #d1d5db; }
+.dot.on { background: #22c55e; }
+.title { font-weight: 600; color: #111827; }
+.status { font-size: 13px; margin: 6px 0 12px; }
+.status-on { color: #16a34a; }
+.status-off { color: #6b7280; }
+.actions { display: flex; gap: 8px; }
+.btn { flex: 1; background: #4f46e5; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.btn:hover { background: #4338ca; }
+.btn-secondary { background: #e5e7eb; color: #111827; }
+.btn-secondary:hover { background: #d1d5db; }
+

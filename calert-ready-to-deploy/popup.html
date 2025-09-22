@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calert</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="dot"></div>
+        <div class="title">Calert</div>
+      </div>
+      <div id="status" class="status status-off">Monitoring inactive</div>
+      <div class="actions">
+        <button id="openSettings" class="btn">Settings</button>
+        <button id="reschedule" class="btn btn-secondary">Reschedule</button>
+      </div>
+    </div>
+    <script>
+      const statusEl = document.getElementById('status');
+      const dot = document.querySelector('.dot');
+      function setStatus(active) {
+        statusEl.textContent = active ? 'Monitoring active' : 'Monitoring inactive';
+        statusEl.classList.toggle('status-on', active);
+        statusEl.classList.toggle('status-off', !active);
+        dot.classList.toggle('on', active);
+      }
+      chrome.storage.sync.get(['settings'], ({ settings }) => {
+        setStatus(!!(settings && settings.isEnabled));
+      });
+      document.getElementById('openSettings').addEventListener('click', () => {
+        chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
+      });
+      document.getElementById('reschedule').addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'calert-reschedule' });
+        window.close();
+      });
+    </script>
+  </body>
+  </html>
+
+

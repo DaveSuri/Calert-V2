@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { User, Calendar, Settings } from '../types';
 import Spinner from './Spinner';
 import { fetchCalendars } from '../services/googleCalendarApi';
+import { UnauthorizedError } from '../services/http';
 
 interface OnboardingScreenProps {
   user: User;
@@ -26,9 +27,13 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ user, onOnboardingC
         setSelectedCalendarId(primaryCalendar.id);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Failed to fetch calendars. Please ensure the Google Calendar API is enabled for your project. (Error: ${message})`);
-      console.error(err);
+      if (err instanceof UnauthorizedError || (err instanceof Error && err.message === 'Unauthorized')) {
+        setError('Your session has expired. Please log out and log in again to reconnect your calendar.');
+      } else {
+        const message = err instanceof Error ? err.message : 'An unknown error occurred.';
+        setError(`Failed to fetch calendars. Please ensure the Google Calendar API is enabled for your project. (Error: ${message})`);
+        console.error(err);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -5,6 +5,7 @@ import PricingScreen from './components/PricingScreen';
 import AccountScreen from './components/AccountScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import type { User, Settings } from './types';
+import { setUnauthorizedHandler } from './services/http';
 
 // This allows TypeScript to recognize the `google` global variable from the script
 declare var google: any;
@@ -66,6 +67,17 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  // Register a global unauthorized handler to trigger re-auth and allow a retry once
+  useEffect(() => {
+    setUnauthorizedHandler(async () => {
+      try {
+        handleLogin();
+      } catch (e) {
+        console.warn('Failed to trigger re-auth automatically. Please click login again.');
+      }
+    });
+  }, []);
 
   const handleLogin = () => {
     if (!GOOGLE_CLIENT_ID) {

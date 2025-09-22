@@ -1,5 +1,6 @@
 import type { Calendar, Event } from '../types';
 import { SERVER_BASE_URL } from '../config';
+import { apiFetch, UnauthorizedError } from './http';
 
 interface GoogleCalendarListItem {
   id: string;
@@ -41,34 +42,31 @@ const API_BASE_URL = IS_EXTENSION ? SERVER_BASE_URL : '';
  * @returns A promise that resolves to an array of calendars.
  */
 export const fetchCalendars = async (accessToken: string): Promise<Calendar[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/calendars`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const data = await apiFetch(`${API_BASE_URL}/api/calendars`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      expectJson: true,
+    }) as unknown as GoogleCalendarListResponse;
 
-  if (!response.ok) {
-    if (response.status === 401) {
-       // The token is invalid or expired. The UI should prompt for re-authentication.
-       throw new Error('Unauthorized');
+    if (!data.items) {
+      return [];
     }
-    const errorText = await response.text();
-    console.error("Error from calendar proxy:", errorText);
-    throw new Error(`API request failed with status: ${response.status}`);
+
+    // Map the API response to the application's internal Calendar type
+    return data.items.map((item): Calendar => ({
+      id: item.id,
+      summary: item.summary,
+      primary: !!item.primary,
+    }));
+  } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      throw err;
+    }
+    console.error('Error from calendar proxy:', err);
+    throw err instanceof Error ? err : new Error('Failed to fetch calendars');
   }
-
-  const data: GoogleCalendarListResponse = await response.json();
-
-  if (!data.items) {
-    return [];
-  }
-
-  // Map the API response to the application's internal Calendar type
-  return data.items.map((item): Calendar => ({
-    id: item.id,
-    summary: item.summary,
-    primary: !!item.primary,
-  }));
 };
 
 /**
@@ -83,33 +81,31 @@ export const fetchUpcomingEvents = async (accessToken: string, calendarId: strin
   }
   const encodedCalendarId = encodeURIComponent(calendarId);
 
-  const response = await fetch(`${API_BASE_URL}/api/events?calendarId=${encodedCalendarId}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const data = await apiFetch(`${API_BASE_URL}/api/events?calendarId=${encodedCalendarId}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      expectJson: true,
+    }) as unknown as GoogleCalendarEventsResponse;
 
-  if (!response.ok) {
-    if (response.status === 401) {
-       throw new Error('Unauthorized');
+    if (!data.items) {
+      return [];
     }
-    const errorText = await response.text();
-    console.error("Error from events proxy:", errorText);
-    throw new Error(`API request failed with status: ${response.status}`);
+
+    return data.items
+      .filter(item => item.start?.dateTime) // Filter out all-day events
+      .map((item): Event => ({
+        id: item.id,
+        summary: item.summary || 'No Title',
+        start: item.start.dateTime!,
+        end: item.end.dateTime!,
+      }));
+  } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      throw err;
+    }
+    console.error('Error from events proxy:', err);
+    throw err instanceof Error ? err : new Error('Failed to fetch events');
   }
-
-  const data: GoogleCalendarEventsResponse = await response.json();
-
-  if (!data.items) {
-    return [];
-  }
-
-  return data.items
-    .filter(item => item.start?.dateTime) // Filter out all-day events
-    .map((item): Event => ({
-      id: item.id,
-      summary: item.summary || 'No Title',
-      start: item.start.dateTime!,
-      end: item.end.dateTime!,
-    }));
 };

@@ -1,0 +1,11 @@
+{
+  "name": "calert-simple-deploy",
+  "version": "1.0.0", 
+  "scripts": {
+    "serve": "node serve-app.js",
+    "build-and-serve": "npm run build && npm run serve",
+    "deploy-netlify": "npm run build && npx netlify deploy --dir=dist --prod",
+    "deploy-surge": "npm run build && cd dist && echo 'calert-demo.surge.sh' | npx surge .",
+    "zip-extension": "npm run build && cd dist && zip -r ../calert-extension.zip ."
+  }
+}

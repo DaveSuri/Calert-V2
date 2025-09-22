@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calert - The one notification you can't ignore</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inter font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs (version 11.6.1) -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYa2lyzX8kcIzsrg6SdwNzheKj39RgqyQ",
+            authDomain: "calert-h175v.firebaseapp.com",
+            projectId: "calert-h175v",
+            storageBucket: "calert-h175v.firebasestorage.app",
+            messagingSenderId: "318294354261",
+            appId: "1:318294354261:web:eee2f36064766a3396e7dc"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebase = { auth, db, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, doc, setDoc, getDoc };
+    </script>
+    
+    <!-- Google Identity Services for Calendar API -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Google API Client -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <!-- Login View -->
+    <div id="loginView" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full space-y-8 p-8">
+            <!-- App Logo -->
+            <div class="text-center">
+                <div class="mx-auto h-16 w-16 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h1 class="mt-4 text-3xl font-bold text-gray-900">Calert</h1>
+                <h2 class="mt-2 text-xl font-semibold text-gray-700">The one notification you can't ignore</h2>
+                <p class="mt-4 text-gray-600">Never miss another meeting with assertive, full-screen calendar alerts that demand your attention.</p>
+            </div>
+            
+            <!-- Connect with Google Button -->
+            <div class="mt-8">
+                <button id="connectGoogleBtn" class="w-full flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Connect with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboardView" class="min-h-screen hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
+                            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-semibold text-gray-900">Calert</h1>
+                    </div>
+                    <button id="logoutBtn" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="space-y-8">
+                <!-- Calendar Selection Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Select Calendar</h2>
+                    <div id="calendarList" class="space-y-3">
+                        <!-- Calendar radio buttons will be populated here -->
+                        <div class="text-gray-500 text-sm">Loading calendars...</div>
+                    </div>
+                </div>
+
+                <!-- Service Toggle Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Calert Service</h2>
+                            <p class="text-sm text-gray-500">Enable assertive calendar notifications</p>
+                        </div>
+                        <div class="flex items-center">
+                            <button id="serviceToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                <span id="toggleThumb" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Calert Alert View -->
+    <div id="alertView" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm hidden z-50">
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <!-- Event Title -->
+                <h2 id="alertTitle" class="text-xl font-semibold text-gray-900 mb-2">Meeting Starting Now</h2>
+                
+                <!-- Event Time -->
+                <div id="alertTime" class="text-sm text-gray-600 mb-4">2:00 PM - 3:00 PM</div>
+                
+                <!-- Event Description -->
+                <div id="alertDescription" class="text-gray-700 mb-6">Team standup meeting to discuss project progress and blockers.</div>
+                
+                <!-- Action Buttons -->
+                <div class="space-y-3">
+                    <button id="joinMeetingBtn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                        Join Meeting
+                    </button>
+                    
+                    <button id="prepareMeetingBtn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                        Prepare for Meeting (AI)
+                    </button>
+                    
+                    <button id="dismissBtn" class="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let selectedCalendarId = null;
+        let isServiceEnabled = true;
+        let monitoringInterval = null;
+        let shownEvents = new Set();
+        let googleAccessToken = null;
+        let calendars = [];
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAuth();
+            setupEventListeners();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('connectGoogleBtn').addEventListener('click', handleGoogleSignIn);
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('serviceToggle').addEventListener('click', toggleService);
+            document.getElementById('joinMeetingBtn').addEventListener('click', joinMeeting);
+            document.getElementById('prepareMeetingBtn').addEventListener('click', prepareMeeting);
+            document.getElementById('dismissBtn').addEventListener('click', dismissAlert);
+        }
+
+        // Authentication functions
+        function initializeAuth() {
+            if (window.firebase) {
+                window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        console.log('User signed in:', user.email);
+                        
+                        // Save user data to Firestore
+                        await saveUserData(user);
+                        
+                        showDashboard();
+                        await loadCalendars();
+                    } else {
+                        currentUser = null;
+                        console.log('User signed out');
+                        showLogin();
+                    }
+                });
+            } else {
+                console.error('Firebase not loaded');
+                showLogin();
+            }
+        }
+
+        async function saveUserData(user) {
+            try {
+                const userData = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    lastSignIn: new Date().toISOString(),
+                    settings: {
+                        selectedCalendarId: null,
+                        isServiceEnabled: true
+                    }
+                };
+
+                await window.firebase.setDoc(
+                    window.firebase.doc(window.firebase.db, 'users', user.uid),
+                    userData,
+                    { merge: true }
+                );
+                console.log('User data saved to Firestore');
+            } catch (error) {
+                console.error('Error saving user data:', error);
+            }
+        }
+
+        function handleGoogleSignIn() {
+            if (!window.firebase) {
+                alert('Firebase not loaded. Please refresh the page and try again.');
+                return;
+            }
+
+            const provider = new window.firebase.GoogleAuthProvider();
+            provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+            provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+            provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+            
+            // Show loading state
+            const button = document.getElementById('connectGoogleBtn');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>Connecting...';
+            button.disabled = true;
+            
+            window.firebase.signInWithPopup(window.firebase.auth, provider)
+                .then((result) => {
+                    console.log('Sign in successful:', result.user);
+                    // Auth state change will handle the rest
+                })
+                .catch((error) => {
+                    console.error('Sign in error:', error);
+                    
+                    // Reset button state
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    // Handle specific error types
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        alert('Sign in was cancelled. Please try again.');
+                    } else if (error.code === 'auth/popup-blocked') {
+                        alert('Popup was blocked. Please allow popups for this site and try again.');
+                    } else {
+                        alert(`Sign in failed: ${error.message}. Please try again.`);
+                    }
+                })
+                .finally(() => {
+                    const button = document.getElementById('connectGoogleBtn');
+                    if (button) {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }
+                });
+        }
+
+        function handleLogout() {
+            if (window.firebase) {
+                window.firebase.signOut(window.firebase.auth)
+                    .then(() => {
+                        console.log('Sign out successful');
+                        stopMonitoring();
+                        // Clear local data
+                        selectedCalendarId = null;
+                        isServiceEnabled = true;
+                        shownEvents.clear();
+                    })
+                    .catch((error) => {
+                        console.error('Sign out error:', error);
+                        alert('Logout failed. Please try again.');
+                    });
+            }
+        }
+
+        async function loadUserSettings() {
+            if (!currentUser || !window.firebase) return;
+
+            try {
+                const userDoc = await window.firebase.getDoc(
+                    window.firebase.doc(window.firebase.db, 'users', currentUser.uid)
+                );
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    selectedCalendarId = userData.settings?.selectedCalendarId || null;
+                    isServiceEnabled = userData.settings?.isServiceEnabled ?? true;
+                    
+                    // Update UI to reflect loaded settings
+                    updateServiceToggleUI();
+                    console.log('User settings loaded:', userData.settings);
+                }
+            } catch (error) {
+                console.error('Error loading user settings:', error);
+            }
+        }
+
+        async function saveUserSettings() {
+            if (!currentUser || !window.firebase) return;
+
+            try {
+                await window.firebase.setDoc(
+                    window.firebase.doc(window.firebase.db, 'users', currentUser.uid),
+                    {
+                        settings: {
+                            selectedCalendarId: selectedCalendarId,
+                            isServiceEnabled: isServiceEnabled
+                        }
+                    },
+                    { merge: true }
+                );
+                console.log('User settings saved');
+            } catch (error) {
+                console.error('Error saving user settings:', error);
+            }
+        }
+
+        // UI functions
+        function showLogin() {
+            document.getElementById('loginView').classList.remove('hidden');
+            document.getElementById('dashboardView').classList.add('hidden');
+            document.getElementById('alertView').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            document.getElementById('alertView').classList.add('hidden');
+            
+            // Load user settings when showing dashboard
+            loadUserSettings();
+        }
+
+        function updateServiceToggleUI() {
+            const toggleThumb = document.getElementById('toggleThumb');
+            const toggleButton = document.getElementById('serviceToggle');
+            
+            if (isServiceEnabled) {
+                toggleThumb.classList.remove('translate-x-1');
+                toggleThumb.classList.add('translate-x-6');
+                toggleButton.classList.remove('bg-gray-200');
+                toggleButton.classList.add('bg-indigo-600');
+            } else {
+                toggleThumb.classList.remove('translate-x-6');
+                toggleThumb.classList.add('translate-x-1');
+                toggleButton.classList.remove('bg-indigo-600');
+                toggleButton.classList.add('bg-gray-200');
+            }
+        }
+
+        function showAlert(event) {
+            // Store current event for use in alert actions
+            window.currentAlertEvent = event;
+            
+            document.getElementById('alertTitle').textContent = event.summary || 'Meeting Starting Now';
+            document.getElementById('alertTime').textContent = formatEventTime(event);
+            document.getElementById('alertDescription').textContent = event.description || 'No description available.';
+            
+            document.getElementById('alertView').classList.remove('hidden');
+            
+            // Play notification sound (optional)
+            playNotificationSound();
+        }
+
+        function playNotificationSound() {
+            // Create a simple notification sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Calendar functions
+        async function loadCalendars() {
+            if (!currentUser) return;
+
+            const calendarList = document.getElementById('calendarList');
+            calendarList.innerHTML = '<div class="text-gray-500 text-sm">Loading calendars...</div>';
+
+            try {
+                // Get Google access token from Firebase user
+                const token = await currentUser.getIdToken();
+                
+                // Initialize Google Identity Services for Calendar API
+                await initializeGoogleCalendarAPI();
+                
+                // Fetch user's calendars
+                await fetchCalendars();
+                
+                // Populate calendar list
+                populateCalendarList();
+                
+            } catch (error) {
+                console.error('Error loading calendars:', error);
+                calendarList.innerHTML = '<div class="text-red-500 text-sm">Failed to load calendars. Please try again.</div>';
+            }
+        }
+
+        async function initializeGoogleCalendarAPI() {
+            return new Promise((resolve, reject) => {
+                if (typeof google === 'undefined' || !google.accounts) {
+                    reject(new Error('Google Identity Services not loaded'));
+                    return;
+                }
+
+                // Initialize the Google API client
+                gapi.load('client', async () => {
+                    try {
+                        await gapi.client.init({
+                            apiKey: 'AIzaSyBQboyVKlOf2qDV9XqGHDaa-sugLKiRILg',
+                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+                        });
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
+
+        async function fetchCalendars() {
+            return new Promise((resolve, reject) => {
+                const client = google.accounts.oauth2.initTokenClient({
+                    client_id: '360373462324-nr5vpdjfd1g5i38j5h5c6l3g74d0lqd9.apps.googleusercontent.com',
+                    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+                    callback: async (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            reject(new Error(tokenResponse.error));
+                            return;
+                        }
+
+                        googleAccessToken = tokenResponse.access_token;
+                        
+                        try {
+                            // Set the access token for gapi client
+                            gapi.client.setToken({ access_token: googleAccessToken });
+                            
+                            // Fetch calendar list
+                            const response = await gapi.client.calendar.calendarList.list();
+                            calendars = response.result.items || [];
+                            resolve(calendars);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    }
+                });
+                
+                client.requestAccessToken();
+            });
+        }
+
+        function populateCalendarList() {
+            const calendarList = document.getElementById('calendarList');
+            
+            if (calendars.length === 0) {
+                calendarList.innerHTML = '<div class="text-gray-500 text-sm">No calendars found.</div>';
+                return;
+            }
+
+            let html = '';
+            calendars.forEach((calendar, index) => {
+                const isSelected = selectedCalendarId === calendar.id;
+                html += `
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}">
+                        <input type="radio" name="calendar" value="${calendar.id}" 
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" 
+                               ${isSelected ? 'checked' : ''}
+                               onchange="selectCalendar('${calendar.id}')">
+                        <div class="ml-3 flex-1">
+                            <div class="text-sm font-medium text-gray-900">${calendar.summary}</div>
+                            <div class="text-xs text-gray-500">${calendar.description || 'No description'}</div>
+                        </div>
+                        <div class="w-4 h-4 rounded-full" style="background-color: ${calendar.backgroundColor || '#3B82F6'}"></div>
+                    </label>
+                `;
+            });
+            
+            calendarList.innerHTML = html;
+        }
+
+        function selectCalendar(calendarId) {
+            selectedCalendarId = calendarId;
+            saveUserSettings();
+            console.log('Selected calendar:', calendarId);
+        }
+
+        function toggleService() {
+            isServiceEnabled = !isServiceEnabled;
+            
+            if (isServiceEnabled) {
+                startMonitoring();
+            } else {
+                stopMonitoring();
+            }
+            
+            // Update UI
+            updateServiceToggleUI();
+            
+            // Save settings to Firebase
+            saveUserSettings();
+        }
+
+        // Monitoring functions
+        function startMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            monitoringInterval = setInterval(checkCalendar, 30000); // Check every 30 seconds
+            console.log('Monitoring started');
+        }
+
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+            console.log('Monitoring stopped');
+        }
+
+        async function checkCalendar() {
+            if (!selectedCalendarId || !googleAccessToken || !isServiceEnabled) {
+                return;
+            }
+
+            try {
+                console.log('Checking calendar for upcoming events...');
+                
+                // Get current time and next 5 minutes
+                const now = new Date();
+                const timeMin = now.toISOString();
+                const timeMax = new Date(now.getTime() + 5 * 60 * 1000).toISOString(); // Next 5 minutes
+                
+                // Fetch events from the selected calendar
+                const response = await gapi.client.calendar.events.list({
+                    calendarId: selectedCalendarId,
+                    timeMin: timeMin,
+                    timeMax: timeMax,
+                    singleEvents: true,
+                    orderBy: 'startTime',
+                    maxResults: 10
+                });
+                
+                const events = response.result.items || [];
+                
+                // Check for events that are starting now
+                for (const event of events) {
+                    if (shouldShowAlert(event)) {
+                        showAlert(event);
+                        // Mark event as shown
+                        shownEvents.add(event.id);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error checking calendar:', error);
+            }
+        }
+
+        function shouldShowAlert(event) {
+            // Don't show if already shown
+            if (shownEvents.has(event.id)) {
+                return false;
+            }
+            
+            // Don't show if event is all day
+            if (event.start.date) {
+                return false;
+            }
+            
+            // Check if event is starting now (within the next 2 minutes)
+            const now = new Date();
+            const eventStart = new Date(event.start.dateTime);
+            const timeDiff = eventStart.getTime() - now.getTime();
+            
+            // Show alert if event starts within the next 2 minutes
+            return timeDiff >= 0 && timeDiff <= 2 * 60 * 1000;
+        }
+
+        // Alert functions
+        function joinMeeting() {
+            const currentEvent = window.currentAlertEvent;
+            if (currentEvent && currentEvent.hangoutLink) {
+                // Open Google Meet link if available
+                window.open(currentEvent.hangoutLink, '_blank');
+            } else if (currentEvent && currentEvent.conferenceData) {
+                // Handle other conference links
+                const conferenceLink = currentEvent.conferenceData.entryPoints?.[0]?.uri;
+                if (conferenceLink) {
+                    window.open(conferenceLink, '_blank');
+                }
+            } else {
+                // Fallback: try to extract meeting link from description
+                const description = currentEvent?.description || '';
+                const meetingLinkMatch = description.match(/(https?:\/\/[^\s]+)/);
+                if (meetingLinkMatch) {
+                    window.open(meetingLinkMatch[1], '_blank');
+                } else {
+                    alert('No meeting link found for this event.');
+                }
+            }
+            dismissAlert();
+        }
+
+        function prepareMeeting() {
+            const currentEvent = window.currentAlertEvent;
+            if (!currentEvent) return;
+            
+            // Show loading state
+            const button = document.getElementById('prepareMeetingBtn');
+            const originalText = button.textContent;
+            button.textContent = 'Preparing...';
+            button.disabled = true;
+            
+            // Simulate AI preparation (replace with actual AI integration)
+            setTimeout(() => {
+                const meetingTitle = currentEvent.summary || 'Meeting';
+                const meetingDescription = currentEvent.description || 'No description available.';
+                
+                // Create AI preparation content
+                const preparation = generateMeetingPreparation(meetingTitle, meetingDescription);
+                
+                // Show preparation in a modal or alert
+                showMeetingPreparation(preparation);
+                
+                // Reset button
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+
+        function generateMeetingPreparation(title, description) {
+            // Simple AI-like preparation (replace with actual AI service)
+            return {
+                agenda: [
+                    'Review meeting objectives',
+                    'Prepare key talking points',
+                    'Check required documents',
+                    'Test audio/video equipment'
+                ],
+                keyPoints: [
+                    'Meeting: ' + title,
+                    'Duration: Check calendar for timing',
+                    'Participants: Review attendee list',
+                    'Preparation: Review agenda and materials'
+                ],
+                tips: [
+                    'Join 2-3 minutes early',
+                    'Have backup connection ready',
+                    'Close unnecessary applications',
+                    'Prepare questions in advance'
+                ]
+            };
+        }
+
+        function showMeetingPreparation(preparation) {
+            // Create and show preparation modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-96 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Meeting Preparation</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Agenda Checklist</h4>
+                            <ul class="space-y-1">
+                                ${preparation.agenda.map(item => `<li class="flex items-center text-sm text-gray-600">
+                                    <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    ${item}
+                                </li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Key Points</h4>
+                            <ul class="space-y-1">
+                                ${preparation.keyPoints.map(point => `<li class="text-sm text-gray-600">• ${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Pro Tips</h4>
+                            <ul class="space-y-1">
+                                ${preparation.tips.map(tip => `<li class="text-sm text-gray-600">💡 ${tip}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function dismissAlert() {
+            document.getElementById('alertView').classList.add('hidden');
+            window.currentAlertEvent = null;
+        }
+
+        function formatEventTime(event) {
+            if (!event.start || !event.start.dateTime) {
+                return 'Time not specified';
+            }
+            
+            const startTime = new Date(event.start.dateTime);
+            const endTime = event.end ? new Date(event.end.dateTime) : null;
+            
+            const formatTime = (date) => {
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            };
+            
+            if (endTime) {
+                return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+            } else {
+                return `Starts at ${formatTime(startTime)}`;
+            }
+        }
+
+        // Debug helper to manually trigger a calendar check from the console
+        // Usage: window.triggerCalertTest('<calendarId>')
+        window.triggerCalertTest = (calendarId) => {
+            try {
+                isServiceEnabled = true;
+                if (calendarId) {
+                    selectedCalendarId = calendarId;
+                }
+                console.log('Triggering manual calendar check for:', selectedCalendarId);
+                checkCalendar();
+            } catch (e) {
+                console.error('Failed to trigger manual calendar check:', e);
+            }
+        };
+    </script>
+</body>
+</html>

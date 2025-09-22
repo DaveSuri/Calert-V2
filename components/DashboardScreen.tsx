@@ -4,6 +4,8 @@ import Header from './Header';
 import Spinner from './Spinner';
 import ToggleSwitch from './ToggleSwitch';
 import { fetchCalendars, fetchUpcomingEvents } from '../services/googleCalendarApi';
+import { syncTodayEvents } from '../services/sync';
+import { UnauthorizedError } from '../services/http';
 
 // Fix: Add a type declaration for the `chrome` global variable to resolve TypeScript errors.
 declare const chrome: any;
@@ -30,6 +32,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
   const [events, setEvents] = useState<Event[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const [briefingsUsed, setBriefingsUsed] = useState(0);
 
@@ -86,7 +91,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
           }
       }
     } catch (err) {
-      if (err instanceof Error && err.message === 'Unauthorized') {
+      if (err instanceof UnauthorizedError || (err instanceof Error && err.message === 'Unauthorized')) {
         setError('Your session has expired. Please log out and log in again to reconnect your calendar.');
       } else {
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -136,13 +141,35 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
     }
   }, [selectedCalendarId, isEnabled, savedSettings]);
 
+
+  const handleSync = async () => {
+    if (!selectedCalendarId) {
+      setSyncMessage('Please select a calendar first.');
+      return;
+    }
+    try {
+      setIsSyncing(true);
+      setSyncMessage(null);
+      const res = await syncTodayEvents(user.accessToken, selectedCalendarId);
+      setSyncMessage(`Synced ${res.count} events for ${res.day}.`);
+    } catch (err) {
+      if (err instanceof UnauthorizedError || (err instanceof Error && err.message === 'Unauthorized')) {
+        setSyncMessage('Session expired. Please log in again and retry.');
+      } else {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setSyncMessage(`Failed to sync: ${msg}`);
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleSave = () => {
     setSaveStatus('saving');
-    
     const newSettings: Settings = { selectedCalendarId, isEnabled };
     const dataToSync = {
-        settings: newSettings,
-        user: user,
+      settings: newSettings,
+      user: user,
     };
 
     // Save to the extension's synced storage if available
@@ -285,6 +312,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user, onLogout, saved
               <h3 className="text-lg font-semibold text-gray-800">Upcoming Events</h3>
               <div className="mt-4">
                 {renderEventsList()}
+              </div>
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <button
+                  onClick={handleSync}
+                  disabled={isSyncing || !selectedCalendarId}
+                  className="w-full flex justify-center items-center rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 disabled:bg-gray-300"
+                >
+                  {isSyncing ? 'Syncing…' : "Sync Today's Events"}
+                </button>
+                {syncMessage && <p className="mt-2 text-xs text-gray-600">{syncMessage}</p>}
               </div>
             </div>
 

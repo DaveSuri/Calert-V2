@@ -1,5 +1,5 @@
 {
-  "name": "calert-server",
+  "name": "calert-app",
   "version": "1.0.0",
   "description": "Server for the Calert application.",
   "main": "server.js",
@@ -8,11 +8,27 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package-extension": "cd dist && zip -r ../calert-extension-v$(node -p \"require('../package.json').version\").zip . && cd .. && echo 'Extension packaged as calert-extension-v$(node -p \"require('./package.json').version\").zip'",
+    "test": "vitest run",
+    "serve": "node serve-app.js",
+    "build-and-serve": "npm run build && npm run serve",
+    "deploy-netlify": "npm run build && npx netlify deploy --dir=dist --prod",
+    "deploy-surge": "npm run build && cd dist && echo 'calert-demo.surge.sh' | npx surge .",
+    "zip-extension": "npm run build && cd dist && zip -r ../calert-extension.zip ."
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.4.1",
+    "firebase": "^10.13.1",
+    "firebase-admin": "^12.6.0",
+    "marked": "^16.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -20,8 +36,14 @@
     "@types/node": "^24.3.1",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3",
+    "supertest": "^7.0.0",
     "typescript": "^5.5.4",
-    "vite": "^5.4.8"
+    "vite": "^5.4.8",
+    "vitest": "^2.1.1"
   }
 }
