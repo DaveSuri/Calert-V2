@@ -26,6 +26,16 @@ app.use(cors({
       return callback(null, true);
     }
 
+    // Allow Netlify domains (*.netlify.app)
+    if (origin.endsWith('.netlify.app') || origin.endsWith('.netlify.com')) {
+      return callback(null, true);
+    }
+
+    // Allow Vercel domains (*.vercel.app)
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.vercel.com')) {
+      return callback(null, true);
+    }
+
     // Allow specific production domains via env var ALLOWED_ORIGINS (comma-separated)
     const allowed = (process.env.ALLOWED_ORIGINS || '')
       .split(',')
@@ -36,11 +46,12 @@ app.use(cors({
     }
 
     // Reject other origins
+    console.warn(`CORS blocked origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Token']
 }));
 
 // Request size limits and JSON parsing
