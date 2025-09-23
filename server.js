@@ -26,6 +26,11 @@ app.use(cors({
       return callback(null, true);
     }
 
+    // Allow your specific Netlify domain
+    if (origin === 'https://luxury-begonia-e85c75.netlify.app') {
+      return callback(null, true);
+    }
+
     // Allow Netlify domains (*.netlify.app)
     if (origin.endsWith('.netlify.app') || origin.endsWith('.netlify.com')) {
       return callback(null, true);
@@ -57,6 +62,15 @@ app.use(cors({
 // Request size limits and JSON parsing
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Handle preflight OPTIONS requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-App-Token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // Rate limiting for AI briefing endpoint
 const briefingLimiter = rateLimit({
