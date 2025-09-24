@@ -344,6 +344,11 @@ apiRouter.get('/events', async (req, res) => {
 
 app.use('/api', apiRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 
 // --- STATIC FILE & SPA SERVING ---
 
@@ -360,7 +365,7 @@ app.get('*', (req, res) => {
 
 // Export app for tests; only start server when run directly
 if (require.main === module) {
-  app.listen(port, () => {
+  app.listen(port, '0.0.0.0', () => {
     console.log(`Calert server listening on port ${port}`);
   });
 }

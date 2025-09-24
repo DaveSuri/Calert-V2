@@ -31,7 +31,7 @@
         setStatus(!!(settings && settings.isEnabled));
       });
       document.getElementById('openSettings').addEventListener('click', () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
+        chrome.tabs.create({ url: chrome.runtime.getURL('extension-settings.html') });
       });
       document.getElementById('reschedule').addEventListener('click', () => {
         chrome.runtime.sendMessage({ type: 'calert-reschedule' });

@@ -20,7 +20,7 @@
 // 4) If running on localhost, default to http://localhost:8080
 // 5) Fallback to the production URL below
 
-const DEFAULT_PROD_URL = 'https://calert-360373462324.us-west1.run.app';
+const DEFAULT_PROD_URL = 'https://calert-backend-360373462324.us-west1.run.app';
 const DEFAULT_DEV_URL = 'http://localhost:8080';
 
 function readFromQueryString() {

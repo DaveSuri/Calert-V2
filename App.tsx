@@ -29,6 +29,14 @@ const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.go
 
 
 const App: React.FC = () => {
+  // Initialize APP token early for development
+  useEffect(() => {
+    if (!localStorage.getItem('calert_app_token')) {
+      localStorage.setItem('calert_app_token', 'calert-secure-token-2024');
+      console.log('✅ APP_TOKEN initialized for development');
+    }
+  }, []);
+
   const [user, setUser] = useState<User | null>(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);

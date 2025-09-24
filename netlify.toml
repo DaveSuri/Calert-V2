@@ -8,7 +8,7 @@
   VITE_FIREBASE_PROJECT_ID = "calert-h175v"
   VITE_GOOGLE_CLIENT_ID_WEB = "360373462324-nr5vpdjfd1g5i38j5h5c6l3g74d0lqd9.apps.googleusercontent.com"
   VITE_GOOGLE_CLIENT_ID_EXTENSION = "360373462324-0fjqvtd35esaqi5v8ioschmbhshj0l4l.apps.googleusercontent.com"
-  VITE_SERVER_BASE_URL = "https://calert-360373462324.us-west1.run.app"
+  VITE_SERVER_BASE_URL = "https://calert-backend-360373462324.us-west1.run.app"
 
 [[headers]]
   for = "/*"

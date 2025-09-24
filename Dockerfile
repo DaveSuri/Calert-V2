@@ -21,8 +21,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy server and built assets
+# Copy server, built assets, and Firebase config
 COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/server ./server
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 

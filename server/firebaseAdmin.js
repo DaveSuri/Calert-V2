@@ -6,10 +6,19 @@ const { getFirestore } = require('firebase-admin/firestore');
 
 function getDb() {
   if (!getApps().length) {
-    initializeApp({
-      // With Workload Identity or GOOGLE_APPLICATION_CREDENTIALS this is enough
-      credential: applicationDefault(),
-    });
+    try {
+      // Try to use Application Default Credentials first (for Cloud Run)
+      initializeApp({
+        credential: applicationDefault(),
+        projectId: process.env.FIREBASE_PROJECT_ID || 'calert-470621'
+      });
+    } catch (error) {
+      console.error('Failed to initialize Firebase with default credentials:', error);
+      // Fallback initialization without credentials for local development
+      initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID || 'calert-470621'
+      });
+    }
   }
   return getFirestore();
 }
